@@ -1,10 +1,10 @@
-const CACHE_NAME = 'kids-planner-v1';
+const CACHE_NAME = 'kids-planner-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/kids-planner/',
+  '/kids-planner/index.html',
+  '/kids-planner/manifest.json',
+  '/kids-planner/icon-192.png',
+  '/kids-planner/icon-512.png',
   'https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap'
 ];
 
@@ -38,7 +38,24 @@ self.addEventListener('fetch', event => {
         const clone = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('/kids-planner/index.html'));
+    })
+  );
+});
+
+// 알림 클릭 시 앱 창으로 포커스
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes('/kids-planner') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/kids-planner/');
+      }
     })
   );
 });

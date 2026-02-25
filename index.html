@@ -6,12 +6,12 @@
 <title>🌟 오늘의 할일!</title>
 
 <!-- PWA 설정 -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/kids-planner/manifest.json">
 <meta name="theme-color" content="#AEE6FF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="할일!">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="/kids-planner/icon-192.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 <style>
@@ -577,13 +577,45 @@
 </div>
 
 <script>
-// =========== PWA Service Worker 등록 ===========
+// =========== PWA Service Worker 등록 + 알림 권한 ===========
+let swRegistration = null;
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.log('SW registration failed:', err));
+  window.addEventListener('load', async () => {
+    try {
+      swRegistration = await navigator.serviceWorker.register('/kids-planner/sw.js', { scope: '/kids-planner/' });
+      console.log('SW registered:', swRegistration.scope);
+
+      // 알림 권한 요청 (아직 결정 안 된 경우만)
+      if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(async () => {
+          const permission = await Notification.requestPermission();
+          console.log('Notification permission:', permission);
+        }, 2000);
+      }
+    } catch (err) {
+      console.log('SW registration failed:', err);
+    }
   });
+}
+
+// 타이머 종료 시 알림 발송 (백그라운드일 때만)
+async function sendTimerNotification(label) {
+  if (document.visibilityState === 'visible') return;
+  if ('Notification' in window && Notification.permission === 'granted' && swRegistration) {
+    try {
+      await swRegistration.showNotification('⏰ 시간 끝!', {
+        body: `${label} 시간이 다 됐어요! 잘 했어요! 🎉`,
+        icon: '/kids-planner/icon-192.png',
+        badge: '/kids-planner/icon-192.png',
+        vibrate: [200, 100, 200],
+        tag: 'timer-done',
+        renotify: true,
+      });
+    } catch (e) {
+      console.log('Notification failed:', e);
+    }
+  }
 }
 
 // =========== 날짜 ===========
@@ -961,6 +993,7 @@ function toggleTimer(i) {
         playBeep();
         showPopup('⏰', '시간 끝!', `${timerLabel} 시간이 다 됐어요! 잘 했어요! 🎉`);
         confettiBurst();
+        sendTimerNotification(timerLabel);
       } else {
         renderTimers();
       }
