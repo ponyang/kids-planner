@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🌟 오늘의 할일!</title>
+
+<!-- PWA 설정 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#AEE6FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="할일!">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #AEE6FF;
+    --sun: #FFD93D;
+    --grass: #6BCB77;
+    --pink: #FF6B9D;
+    --purple: #C77DFF;
+    --orange: #FF9A3C;
+    --white: #FFFEF5;
+    --dark: #3A3335;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Gaegu', cursive;
+    background: var(--sky);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* 배경 구름들 */
+  .cloud {
+    position: fixed;
+    background: white;
+    border-radius: 50px;
+    opacity: 0.85;
+    animation: float 8s ease-in-out infinite;
+    z-index: 0;
+  }
+  .cloud::before, .cloud::after {
+    content: '';
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+  }
+  .cloud1 { width: 120px; height: 45px; top: 8%; left: 5%; animation-delay: 0s; }
+  .cloud1::before { width: 60px; height: 60px; top: -25px; left: 20px; }
+  .cloud1::after { width: 40px; height: 40px; top: -15px; left: 60px; }
+  .cloud2 { width: 90px; height: 35px; top: 15%; right: 8%; animation-delay: 3s; }
+  .cloud2::before { width: 45px; height: 45px; top: -20px; left: 15px; }
+  .cloud2::after { width: 30px; height: 30px; top: -12px; left: 50px; }
+  .cloud3 { width: 100px; height: 38px; top: 5%; left: 45%; animation-delay: 5s; }
+  .cloud3::before { width: 50px; height: 50px; top: -22px; left: 18px; }
+  .cloud3::after { width: 35px; height: 35px; top: -14px; left: 55px; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+
+  /* 풀밭 배경 */
+  .grass-bg {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, var(--grass), #4CAF50);
+    border-radius: 50% 50% 0 0 / 20px 20px 0 0;
+    z-index: 0;
+  }
+
+  /* 해 */
+  .sun-icon {
+    position: fixed;
+    top: 15px; right: 15px;
+    font-size: 52px;
+    animation: spin-slow 20s linear infinite;
+    z-index: 0;
+    filter: drop-shadow(0 0 15px rgba(255,217,61,0.7));
+  }
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* 메인 컨테이너 */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 16px 100px;
+  }
+
+  /* 제목 */
+  .title-card {
+    background: var(--sun);
+    border-radius: 30px;
+    padding: 18px 24px;
+    margin-bottom: 20px;
+    border: 4px solid var(--dark);
+    box-shadow: 5px 5px 0 var(--dark);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .title-card h1 {
+    font-size: 2.2rem;
+    color: var(--dark);
+    line-height: 1.2;
+  }
+  .title-card .stars {
+    font-size: 1.5rem;
+    letter-spacing: 5px;
+  }
+  .date-text {
+    font-size: 1rem;
+    color: #6B5B00;
+    margin-top: 4px;
+  }
+
+  /* 섹션 카드 */
+  .section-card {
+    background: var(--white);
+    border-radius: 24px;
+    border: 3px solid var(--dark);
+    box-shadow: 4px 4px 0 var(--dark);
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--dark);
+    border-bottom: 3px solid var(--dark);
+  }
+  .section-header.pink { background: #FFD6E8; }
+  .section-header.purple { background: #E8D5FF; }
+  .section-header.green { background: #D5FFE4; }
+  .section-header.orange { background: #FFE8D5; }
+
+  /* 체크리스트 아이템 */
+  .task-list { padding: 12px 16px; }
+  .task-group { margin-bottom: 8px; }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+    font-size: 1.2rem;
+    color: var(--dark);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .task-item:active { transform: scale(0.97); }
+  .task-item:hover { background: #F5F0FF; border-color: var(--purple); }
+  .task-item.done {
+    background: #E8FFE8;
+    border-color: var(--grass);
+    text-decoration: line-through;
+    opacity: 0.75;
+  }
+  .parent-task { margin-bottom: 0; }
+  .subtask-list { margin-left: 20px; padding-left: 12px; border-left: 2px dashed #d1d5db; margin-top: 6px; }
+  .subtask-item { font-size: 1.05rem; background: #FAFAFF; }
+  .task-text { flex: 1; }
+  .delete-btn {
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    padding: 4px;
+  }
+  .fold-btn {
+    border: 2px solid var(--dark);
+    border-radius: 12px;
+    background: #F3F4F6;
+    color: var(--dark);
+    width: 32px;
+    height: 32px;
+    font-family: 'Gaegu', cursive;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .checkbox {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--dark);
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .task-item.done .checkbox {
+    background: var(--grass);
+    border-color: var(--grass);
+  }
+
+  /* 할일 추가 */
+  .add-task-area {
+    padding: 10px 16px 16px;
+    display: flex;
+    gap: 8px;
+  }
+  .add-subtask-area {
+    padding: 0 16px 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .add-task-input {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 50px;
+    border: 3px solid var(--dark);
+    font-family: 'Gaegu', cursive;
+    font-size: 1.1rem;
+    outline: none;
+    background: #FFFDE7;
+  }
+  .add-task-input:focus { border-color: var(--purple); }
+  .parent-select {
+    min-width: 160px;
+    max-width: 220px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 3px solid var(--dark);
+    font-family: 'Gaegu', cursive;
+    font-size: 1rem;
+    outline: none;
+    background: #FFFDE7;
+  }
+  .parent-select:focus { border-color: var(--purple); }
+  .subtask-input {
+    flex: 1;
+    min-width: 170px;
+    padding: 10px 16px;
+    border-radius: 50px;
+    border: 3px solid var(--dark);
+    font-family: 'Gaegu', cursive;
+    font-size: 1.05rem;
+    outline: none;
+    background: #FFFDE7;
+  }
+  .subtask-input:focus { border-color: var(--purple); }
+  .add-subtask-btn {
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 23px;
+    background: var(--grass);
+    border: 3px solid var(--dark);
+    font-size: 1.1rem;
+    color: white;
+    font-family: 'Gaegu', cursive;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+    box-shadow: 2px 2px 0 var(--dark);
+  }
+  .add-subtask-btn:active { transform: scale(0.96); }
+  .add-btn {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--purple);
+    border: 3px solid var(--dark);
+    font-size: 1.8rem;
+    color: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.1s;
+    box-shadow: 2px 2px 0 var(--dark);
+  }
+  .add-btn:active { transform: scale(0.9); }
+
+  /* 타이머 섹션 */
+  .timer-grid {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .timer-card {
+    background: white;
+    border-radius: 20px;
+    border: 3px solid var(--dark);
+    box-shadow: 3px 3px 0 var(--dark);
+    padding: 14px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .timer-card:active { transform: scale(0.96); }
+  .timer-card.active { animation: pulse-border 1s ease-in-out infinite; }
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 3px 3px 0 var(--dark); }
+    50% { box-shadow: 3px 3px 0 var(--orange), 0 0 20px rgba(255,154,60,0.4); }
+  }
+
+  .timer-emoji {
+    height: 2.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+  .youtube-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.8rem;
+    height: 1.95rem;
+    border-radius: 0.5rem;
+    background: #FF0000;
+    color: #FFFFFF;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .timer-label { font-size: 1rem; font-weight: 700; color: var(--dark); margin: 4px 0; }
+  .timer-display {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark);
+    font-family: 'Gaegu', cursive;
+    letter-spacing: 2px;
+  }
+  .timer-display.urgent { color: var(--pink); animation: blink 0.5s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .timer-progress {
+    height: 8px;
+    background: #EEE;
+    border-radius: 10px;
+    margin-top: 8px;
+    overflow: hidden;
+    border: 2px solid var(--dark);
+  }
+  .timer-bar {
+    height: 100%;
+    background: var(--grass);
+    border-radius: 10px;
+    transition: width 1s linear, background 0.5s;
+  }
+  .timer-bar.urgent { background: var(--pink); }
+
+  .timer-btn-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  .timer-btn {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 2px solid var(--dark);
+    font-family: 'Gaegu', cursive;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.1s;
+    font-weight: 700;
+  }
+  .timer-btn:active { transform: scale(0.92); }
+  .btn-start { background: var(--grass); color: white; }
+  .btn-pause { background: var(--sun); color: var(--dark); }
+  .btn-reset { background: #FFD6D6; color: var(--dark); }
+  .btn-delete { background: #FECACA; color: #7F1D1D; }
+
+  /* 커스텀 타이머 */
+  .custom-timer {
+    padding: 16px;
+    border-top: 3px solid var(--dark);
+  }
+  .custom-timer h3 { font-size: 1.1rem; margin-bottom: 10px; color: var(--dark); }
+  .custom-timer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .time-input {
+    width: 70px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 3px solid var(--dark);
+    font-family: 'Gaegu', cursive;
+    font-size: 1.3rem;
+    text-align: center;
+    background: #FFFDE7;
+    outline: none;
+  }
+  .custom-timer-label { font-size: 1.1rem; color: var(--dark); }
+  .start-custom-btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 3px solid var(--dark);
+    background: var(--orange);
+    color: white;
+    font-family: 'Gaegu', cursive;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--dark);
+    transition: transform 0.1s;
+  }
+  .start-custom-btn:active { transform: scale(0.95); }
+
+  /* 완료 팝업 */
+  .popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .popup {
+    background: var(--white);
+    border-radius: 30px;
+    border: 4px solid var(--dark);
+    box-shadow: 8px 8px 0 var(--dark);
+    padding: 36px 40px;
+    text-align: center;
+    max-width: 340px;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .popup-emoji { font-size: 4rem; margin-bottom: 12px; display: block; animation: bounce 0.6s ease infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+  .popup h2 { font-size: 2rem; color: var(--dark); margin-bottom: 8px; }
+  .popup p { font-size: 1.2rem; color: #666; margin-bottom: 20px; }
+  .popup-close-btn {
+    padding: 12px 30px;
+    border-radius: 50px;
+    border: 3px solid var(--dark);
+    background: var(--sun);
+    font-family: 'Gaegu', cursive;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--dark);
+    transition: transform 0.1s;
+  }
+  .popup-close-btn:active { transform: scale(0.95); }
+
+  /* 진행도 배지 */
+  .progress-badge {
+    background: var(--pink);
+    border-radius: 50px;
+    border: 3px solid var(--dark);
+    box-shadow: 3px 3px 0 var(--dark);
+    padding: 12px 24px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .progress-text { font-size: 1.1rem; color: white; font-weight: 700; }
+  .progress-bar-wrap {
+    flex: 1;
+    margin: 0 14px;
+    height: 16px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.6);
+  }
+  .progress-fill {
+    height: 100%;
+    background: white;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+  }
+  .progress-stars { font-size: 1.2rem; }
+</style>
+</head>
+<body>
+
+<div class="cloud cloud1"></div>
+<div class="cloud cloud2"></div>
+<div class="cloud cloud3"></div>
+<div class="sun-icon">☀️</div>
+<div class="grass-bg"></div>
+
+<div class="container">
+  <!-- 제목 -->
+  <div class="title-card">
+    <div class="stars">⭐ ⭐ ⭐</div>
+    <h1>오늘의 할일! 🎒</h1>
+    <div class="date-text" id="today-date"></div>
+  </div>
+
+  <!-- 진행도 배지 -->
+  <div class="progress-badge">
+    <div class="progress-text">🏆 오늘의 달성!</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-stars" id="progress-stars">0/0 ⭐</div>
+  </div>
+
+  <!-- 체크리스트 -->
+  <div class="section-card">
+    <div class="section-header pink">📋 할일 목록</div>
+    <div class="task-list" id="task-list"></div>
+    <div class="add-task-area">
+      <input class="add-task-input" id="new-task-input" type="text" placeholder="새 할일 추가하기..." maxlength="30">
+      <button class="add-btn" onclick="addTask()">+</button>
+    </div>
+    <div class="add-subtask-area">
+      <select class="parent-select" id="subtask-parent-select"></select>
+      <input class="subtask-input" id="new-subtask-input" type="text" placeholder="세부항목 추가하기..." maxlength="40">
+      <button class="add-subtask-btn" onclick="addSubTask()">+ 세부</button>
+    </div>
+  </div>
+
+  <!-- 빠른 타이머 -->
+  <div class="section-card">
+    <div class="section-header orange">⏱️ 빠른 타이머</div>
+    <div class="timer-grid" id="timer-grid"></div>
+    <!-- 커스텀 타이머 -->
+    <div class="custom-timer">
+      <h3>⚙️ 직접 설정하기</h3>
+      <div class="custom-timer-row">
+        <input class="time-input" id="custom-min" type="number" min="0" max="180" placeholder="분" value="30">
+        <span class="custom-timer-label">분</span>
+        <input class="time-input" id="custom-sec" type="number" min="0" max="59" placeholder="초" value="0">
+        <span class="custom-timer-label">초</span>
+        <button class="start-custom-btn" onclick="startCustomTimer()">시작 🚀</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 팝업 -->
+<div class="popup-overlay" id="popup" style="display:none">
+  <div class="popup">
+    <span class="popup-emoji" id="popup-emoji">🎉</span>
+    <h2 id="popup-title">완료!</h2>
+    <p id="popup-msg">정말 잘 했어요!</p>
+    <button class="popup-close-btn" onclick="closePopup()">확인 ✓</button>
+  </div>
+</div>
+
+<script>
+// =========== PWA Service Worker 등록 ===========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+
+// =========== 날짜 ===========
+const today = new Date();
+const days = ['일','월','화','수','목','금','토'];
+document.getElementById('today-date').textContent =
+  `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일 (${days[today.getDay()]}요일)`;
+
+// =========== 할일 목록 ===========
+const DEFAULT_TASKS = [
+  { id: 1, text: '세수, 손 씻고 크림 바르기', done: false, collapsed: false, isCustom: false, subtasks: [] },
+  {
+    id: 2,
+    text: '가방 정리하기',
+    done: false,
+    collapsed: false,
+    isCustom: false,
+    subtasks: [
+      { id: 201, text: '외출복 빨래통에 넣기', done: false },
+      { id: 202, text: '물통, 수저통 싱크대에 두기', done: false },
+      { id: 203, text: '영어 숙제 꺼내기', done: false },
+    ],
+  },
+  {
+    id: 3,
+    text: '숙제 하기',
+    done: false,
+    collapsed: false,
+    isCustom: false,
+    subtasks: [
+      { id: 301, text: '홈런 하기 (일일학습, 받아쓰기)', done: false },
+      { id: 302, text: '홈런 문제집 하기', done: false },
+      { id: 303, text: '영어 숙제 하기', done: false },
+    ],
+  },
+  {
+    id: 4,
+    text: '잘 준비 하기',
+    done: false,
+    collapsed: false,
+    isCustom: false,
+    subtasks: [
+      { id: 401, text: '치실 후 양치하기', done: false },
+      { id: 402, text: '얼굴, 몸 씻기', done: false },
+    ],
+  },
+];
+
+function cloneDefaultTasks() {
+  return JSON.parse(JSON.stringify(DEFAULT_TASKS));
+}
+
+function getTodayKey() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function resetTaskChecks(taskList) {
+  taskList.forEach(task => {
+    task.done = false;
+    if (Array.isArray(task.subtasks)) {
+      task.subtasks.forEach(sub => { sub.done = false; });
+    }
+  });
+}
+
+function normalizeTasks(list) {
+  return list.map(task => {
+    const subtasks = Array.isArray(task.subtasks)
+      ? task.subtasks.map(sub => ({
+          id: Number(sub.id),
+          text: String(sub.text || ''),
+          done: !!sub.done
+        })).filter(sub => Number.isFinite(sub.id) && sub.text)
+      : [];
+    return {
+      id: Number(task.id),
+      text: String(task.text || ''),
+      done: subtasks.length > 0 ? subtasks.every(sub => sub.done) : !!task.done,
+      collapsed: !!task.collapsed,
+      isCustom: !!task.isCustom,
+      subtasks
+    };
+  }).filter(task => Number.isFinite(task.id) && task.text);
+}
+
+function isStructuredTaskList(list) {
+  return Array.isArray(list) && list.every(task =>
+    task &&
+    typeof task === 'object' &&
+    Array.isArray(task.subtasks) &&
+    typeof task.text === 'string'
+  );
+}
+
+let tasks;
+let rawTasks = [];
+try {
+  rawTasks = JSON.parse(localStorage.getItem('kids-tasks') || '[]');
+} catch (e) {
+  rawTasks = [];
+}
+if (isStructuredTaskList(rawTasks)) {
+  tasks = normalizeTasks(rawTasks);
+} else {
+  tasks = cloneDefaultTasks();
+}
+if (tasks.length === 0) tasks = cloneDefaultTasks();
+
+const todayKey = getTodayKey();
+const lastResetKey = localStorage.getItem('kids-tasks-last-reset-date');
+if (lastResetKey !== todayKey) {
+  resetTaskChecks(tasks);
+  localStorage.setItem('kids-tasks', JSON.stringify(tasks));
+  localStorage.setItem('kids-tasks-last-reset-date', todayKey);
+}
+
+function saveTasks() {
+  localStorage.setItem('kids-tasks', JSON.stringify(tasks));
+  localStorage.setItem('kids-tasks-last-reset-date', getTodayKey());
+}
+
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+  tasks.forEach(task => {
+    const group = document.createElement('div');
+    group.className = 'task-group';
+
+    const row = document.createElement('div');
+    row.className = 'task-item parent-task' + (task.done ? ' done' : '');
+    row.innerHTML = `
+      <div class="checkbox">${task.done ? '✓' : ''}</div>
+      <span class="task-text">${task.text}</span>
+      ${task.subtasks.length > 0 ? `<button class="fold-btn" onpointerdown="handleToggleFold(event, ${task.id})">${task.collapsed ? '▸' : '▾'}</button>` : ''}
+      ${task.isCustom ? `<span class="delete-btn" onpointerdown="handleDeleteTask(event, ${task.id})">✕</span>` : ''}
+    `;
+    row.querySelector('.checkbox').onclick = () => toggleTask(task.id);
+    row.querySelector('.task-text').onclick = () => toggleTask(task.id);
+    group.appendChild(row);
+
+    if (task.subtasks.length > 0 && !task.collapsed) {
+      const subList = document.createElement('div');
+      subList.className = 'subtask-list';
+      task.subtasks.forEach(sub => {
+        const subRow = document.createElement('div');
+        subRow.className = 'task-item subtask-item' + (sub.done ? ' done' : '');
+        subRow.innerHTML = `
+          <div class="checkbox">${sub.done ? '✓' : ''}</div>
+          <span class="task-text">${sub.text}</span>
+        `;
+        subRow.querySelector('.checkbox').onclick = () => toggleSubTask(task.id, sub.id);
+        subRow.querySelector('.task-text').onclick = () => toggleSubTask(task.id, sub.id);
+        subList.appendChild(subRow);
+      });
+      group.appendChild(subList);
+    }
+
+    list.appendChild(group);
+  });
+  updateProgress();
+  renderParentSelect();
+}
+
+function renderParentSelect() {
+  const select = document.getElementById('subtask-parent-select');
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = '';
+  tasks.forEach(task => {
+    const option = document.createElement('option');
+    option.value = String(task.id);
+    option.textContent = task.text;
+    select.appendChild(option);
+  });
+  if (tasks.length === 0) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = '상위 항목 없음';
+    select.appendChild(option);
+    select.disabled = true;
+  } else {
+    select.disabled = false;
+    if (tasks.some(task => String(task.id) === currentValue)) {
+      select.value = currentValue;
+    }
+  }
+}
+
+function toggleTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  if (task.subtasks.length > 0) {
+    const nextDone = !task.done;
+    task.subtasks.forEach(sub => { sub.done = nextDone; });
+    task.done = nextDone;
+  } else {
+    task.done = !task.done;
+  }
+  saveTasks();
+  renderTasks();
+  if (task.done) {
+    showPopup('🌟', '잘 했어요!', `"${task.text}" 완료! 대단해요! 👏`);
+    confettiBurst();
+  }
+  const allDone = tasks.length > 0 && tasks.every(t => t.done);
+  if (allDone) setTimeout(() => showPopup('🏆', '모두 완료!', '오늘 할일을 다 했어요! 최고예요! 🎊'), 1200);
+}
+
+function toggleSubTask(parentId, subId) {
+  const parent = tasks.find(t => t.id === parentId);
+  if (!parent) return;
+  const sub = parent.subtasks.find(s => s.id === subId);
+  if (!sub) return;
+  sub.done = !sub.done;
+  parent.done = parent.subtasks.every(s => s.done);
+  saveTasks();
+  renderTasks();
+  if (sub.done) {
+    showPopup('✅', '좋아요!', `"${sub.text}" 완료!`);
+  }
+  const allDone = tasks.length > 0 && tasks.every(t => t.done);
+  if (allDone) setTimeout(() => showPopup('🏆', '모두 완료!', '오늘 할일을 다 했어요! 최고예요! 🎊'), 1200);
+}
+
+function toggleFold(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task || task.subtasks.length === 0) return;
+  task.collapsed = !task.collapsed;
+  saveTasks();
+  renderTasks();
+}
+
+function handleToggleFold(event, id) {
+  event.preventDefault();
+  event.stopPropagation();
+  toggleFold(id);
+}
+
+function deleteTask(id) {
+  const target = tasks.find(t => t.id === id);
+  if (!target || !target.isCustom) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks();
+  renderTasks();
+}
+
+function handleDeleteTask(event, id) {
+  event.preventDefault();
+  event.stopPropagation();
+  deleteTask(id);
+}
+
+function addTask() {
+  const input = document.getElementById('new-task-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const id = Date.now();
+  tasks.push({ id, text, done: false, collapsed: false, isCustom: true, subtasks: [] });
+  input.value = '';
+  saveTasks();
+  renderTasks();
+}
+
+function addSubTask() {
+  const input = document.getElementById('new-subtask-input');
+  const parentSelect = document.getElementById('subtask-parent-select');
+  const text = input.value.trim();
+  if (!text) return;
+  const parentId = Number(parentSelect.value);
+  const parent = tasks.find(t => t.id === parentId);
+  if (!parent) return;
+
+  const subtaskId = Date.now() + Math.floor(Math.random() * 1000);
+  parent.subtasks.push({ id: subtaskId, text, done: false });
+  parent.done = parent.subtasks.every(sub => sub.done);
+  parent.collapsed = false;
+  input.value = '';
+  saveTasks();
+  renderTasks();
+}
+
+document.getElementById('new-task-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+document.getElementById('new-subtask-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addSubTask();
+});
+
+function updateProgress() {
+  let total = 0;
+  let done = 0;
+  tasks.forEach(task => {
+    if (task.subtasks.length > 0) {
+      total += task.subtasks.length;
+      done += task.subtasks.filter(sub => sub.done).length;
+    } else {
+      total += 1;
+      if (task.done) done += 1;
+    }
+  });
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-stars').textContent = `${done}/${total} ⭐`;
+}
+
+// =========== 타이머 ===========
+const presetTimers = [
+  { emoji: '🎮', label: '게임', minutes: 60, color: '#E8D5FF' },
+  { emoji: '▶', label: '유튜브', minutes: 60, color: '#FFD6E8', isYoutube: true },
+  { emoji: '📚', label: '숙제', minutes: 40, color: '#D5FFE4' },
+  { emoji: '📖', label: '독서', minutes: 20, color: '#FFE8D5' },
+];
+
+let timerStates = presetTimers.map(t => ({
+  total: t.minutes * 60,
+  remaining: t.minutes * 60,
+  running: false,
+  interval: null
+}));
+
+function renderTimers() {
+  const grid = document.getElementById('timer-grid');
+  grid.innerHTML = '';
+  presetTimers.forEach((preset, i) => {
+    const state = timerStates[i];
+    const isCustom = !!preset.isCustom;
+    const pct = state.remaining / state.total * 100;
+    const urgent = state.remaining <= 60 && state.remaining > 0 && state.running;
+    const mins = String(Math.floor(state.remaining / 60)).padStart(2, '0');
+    const secs = String(state.remaining % 60).padStart(2, '0');
+
+    const card = document.createElement('div');
+    card.className = 'timer-card' + (state.running ? ' active' : '');
+    card.style.background = preset.color;
+
+    card.innerHTML = `
+      <div class="timer-emoji">${preset.isYoutube ? `<span class="youtube-badge">${preset.emoji}</span>` : preset.emoji}</div>
+      <div class="timer-label">${preset.label}</div>
+      <div class="timer-display${urgent ? ' urgent' : ''}">${mins}:${secs}</div>
+      <div class="timer-progress">
+        <div class="timer-bar${urgent ? ' urgent' : ''}" style="width:${pct}%"></div>
+      </div>
+      <div class="timer-btn-row">
+        <button class="timer-btn ${state.running ? 'btn-pause' : 'btn-start'}" onclick="toggleTimer(${i})">
+          ${state.running ? '⏸ 멈춤' : '▶ 시작'}
+        </button>
+        <button class="timer-btn btn-reset" onclick="resetTimer(${i})">↺</button>
+        ${isCustom ? `<button class="timer-btn btn-delete" onpointerdown="handleDeleteTimer(event, ${i})">✕ 삭제</button>` : ''}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function toggleTimer(i) {
+  const state = timerStates[i];
+  if (state.remaining === 0) { resetTimer(i); return; }
+  if (state.running) {
+    clearInterval(state.interval);
+    state.running = false;
+  } else {
+    state.running = true;
+    const timerLabel = presetTimers[i]?.label || '타이머';
+    state.interval = setInterval(() => {
+      state.remaining--;
+      if (state.remaining <= 0) {
+        state.remaining = 0;
+        state.running = false;
+        clearInterval(state.interval);
+        renderTimers();
+        playBeep();
+        showPopup('⏰', '시간 끝!', `${timerLabel} 시간이 다 됐어요! 잘 했어요! 🎉`);
+        confettiBurst();
+      } else {
+        renderTimers();
+      }
+    }, 1000);
+  }
+  renderTimers();
+}
+
+function resetTimer(i) {
+  clearInterval(timerStates[i].interval);
+  timerStates[i].remaining = timerStates[i].total;
+  timerStates[i].running = false;
+  renderTimers();
+}
+
+function deleteTimer(i) {
+  if (!presetTimers[i]?.isCustom) return;
+  clearInterval(timerStates[i].interval);
+  presetTimers.splice(i, 1);
+  timerStates.splice(i, 1);
+  renderTimers();
+}
+
+function handleDeleteTimer(event, i) {
+  event.preventDefault();
+  event.stopPropagation();
+  deleteTimer(i);
+}
+
+function startCustomTimer() {
+  const m = parseInt(document.getElementById('custom-min').value) || 0;
+  const s = parseInt(document.getElementById('custom-sec').value) || 0;
+  const total = m * 60 + s;
+  if (total <= 0) return;
+
+  const idx = timerStates.length;
+  const label = `${m > 0 ? `${m}분` : ''}${s > 0 ? `${s}초` : ''}`;
+  presetTimers.push({ emoji: '⚙️', label, minutes: 0, color: '#D5F0FF', isCustom: true });
+  timerStates.push({ total, remaining: total, running: false, interval: null });
+  renderTimers();
+  setTimeout(() => toggleTimer(idx), 100);
+}
+
+// =========== 팝업 ===========
+function showPopup(emoji, title, msg) {
+  document.getElementById('popup-emoji').textContent = emoji;
+  document.getElementById('popup-title').textContent = title;
+  document.getElementById('popup-msg').textContent = msg;
+  document.getElementById('popup').style.display = 'flex';
+}
+function closePopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+// =========== 효과 ===========
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.3);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.3);
+    });
+  } catch(e) {}
+}
+
+function confettiBurst() {
+  const emojis = ['⭐','🌟','🎉','🎊','🌈','🦋','🌸','🍀'];
+  for (let i = 0; i < 20; i++) {
+    const span = document.createElement('span');
+    span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    span.style.cssText = `
+      position: fixed;
+      font-size: ${1 + Math.random()}rem;
+      left: ${Math.random() * 100}vw;
+      top: -40px;
+      z-index: 200;
+      pointer-events: none;
+      animation: fall ${1 + Math.random() * 2}s ease-in forwards;
+    `;
+    document.body.appendChild(span);
+    setTimeout(() => span.remove(), 3000);
+  }
+}
+
+const style = document.createElement('style');
+style.textContent = `@keyframes fall {
+  to { transform: translateY(110vh) rotate(${Math.random()*360}deg); opacity: 0; }
+}`;
+document.head.appendChild(style);
+
+// =========== 초기화 ===========
+renderTasks();
+renderTimers();
+</script>
+</body>
+</html>
