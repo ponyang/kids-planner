@@ -547,6 +547,25 @@
     </div>
   </div>
 
+  <!-- 알림 상태 카드 -->
+  <div class="section-card" id="notif-card">
+    <div class="section-header purple">🔔 알림 설정</div>
+    <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 1.1rem; color: var(--dark);">
+        상태: <strong id="notif-status-text">확인 중...</strong>
+      </div>
+      <div style="font-size: 0.95rem; color: #666;" id="sw-status-text">SW: 확인 중...</div>
+      <button id="notif-btn" onclick="requestNotifPermission()"
+        style="padding: 12px 20px; border-radius: 20px; border: 3px solid var(--dark);
+               background: var(--purple); color: white; font-family: 'Gaegu', cursive;
+               font-size: 1.1rem; font-weight: 700; cursor: pointer;
+               box-shadow: 2px 2px 0 var(--dark); display: none;">
+        🔔 알림 허용하기
+      </button>
+      <div style="font-size: 0.9rem; color: #999;" id="notif-hint"></div>
+    </div>
+  </div>
+
   <!-- 빠른 타이머 -->
   <div class="section-card">
     <div class="section-header orange">⏱️ 빠른 타이머</div>
@@ -577,26 +596,76 @@
 </div>
 
 <script>
-// =========== PWA Service Worker 등록 + 알림 권한 ===========
+// =========== PWA Service Worker 등록 + 알림 ===========
 let swRegistration = null;
+
+function updateNotifUI() {
+  const statusText = document.getElementById('notif-status-text');
+  const swText = document.getElementById('sw-status-text');
+  const btn = document.getElementById('notif-btn');
+  const hint = document.getElementById('notif-hint');
+  const card = document.getElementById('notif-card');
+
+  // SW 상태
+  if (swRegistration) {
+    swText.textContent = `SW: ✅ 등록됨 (${swRegistration.scope})`;
+  } else {
+    swText.textContent = 'SW: ❌ 미등록';
+  }
+
+  // 알림 권한 상태
+  if (!('Notification' in window)) {
+    statusText.textContent = '❌ 이 브라우저는 알림 미지원';
+    hint.textContent = 'Safari로 홈화면 추가 후 실행해주세요.';
+    btn.style.display = 'none';
+    return;
+  }
+
+  const perm = Notification.permission;
+  if (perm === 'granted') {
+    statusText.textContent = '✅ 알림 허용됨';
+    statusText.style.color = 'var(--grass)';
+    btn.style.display = 'none';
+    hint.textContent = '타이머 종료 시 백그라운드 알림이 발송됩니다.';
+    // 알림 설정 카드 숨기기 (3초 후)
+    setTimeout(() => { card.style.display = 'none'; }, 3000);
+  } else if (perm === 'denied') {
+    statusText.textContent = '❌ 알림 차단됨';
+    statusText.style.color = 'var(--pink)';
+    btn.style.display = 'none';
+    hint.textContent = '설정 → Safari → 알림에서 직접 허용해주세요.';
+  } else {
+    statusText.textContent = '⚠️ 알림 권한 필요';
+    statusText.style.color = 'var(--orange)';
+    btn.style.display = 'block';
+    hint.textContent = '버튼을 눌러 알림을 허용해주세요.';
+  }
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  try {
+    const perm = await Notification.requestPermission();
+    console.log('Permission result:', perm);
+    updateNotifUI();
+  } catch (e) {
+    console.log('Permission request failed:', e);
+    document.getElementById('notif-hint').textContent = '오류: ' + e.message;
+  }
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       swRegistration = await navigator.serviceWorker.register('/kids-planner/sw.js', { scope: '/kids-planner/' });
       console.log('SW registered:', swRegistration.scope);
-
-      // 알림 권한 요청 (아직 결정 안 된 경우만)
-      if ('Notification' in window && Notification.permission === 'default') {
-        setTimeout(async () => {
-          const permission = await Notification.requestPermission();
-          console.log('Notification permission:', permission);
-        }, 2000);
-      }
     } catch (err) {
       console.log('SW registration failed:', err);
     }
+    updateNotifUI();
   });
+} else {
+  updateNotifUI();
 }
 
 // 타이머 종료 시 알림 발송 (백그라운드일 때만)
@@ -937,7 +1006,8 @@ let timerStates = presetTimers.map(t => ({
   total: t.minutes * 60,
   remaining: t.minutes * 60,
   running: false,
-  interval: null
+  interval: null,
+  endTime: null
 }));
 
 function renderTimers() {
@@ -978,16 +1048,23 @@ function toggleTimer(i) {
   const state = timerStates[i];
   if (state.remaining === 0) { resetTimer(i); return; }
   if (state.running) {
+    // 일시정지: 남은 시간을 현재 시각 기준으로 재계산 후 저장
+    state.remaining = Math.max(0, Math.round((state.endTime - Date.now()) / 1000));
     clearInterval(state.interval);
     state.running = false;
+    state.endTime = null;
   } else {
+    // 시작: 종료 예정 시각을 저장
     state.running = true;
+    state.endTime = Date.now() + state.remaining * 1000;
     const timerLabel = presetTimers[i]?.label || '타이머';
     state.interval = setInterval(() => {
-      state.remaining--;
-      if (state.remaining <= 0) {
+      const remaining = Math.max(0, Math.round((state.endTime - Date.now()) / 1000));
+      state.remaining = remaining;
+      if (remaining <= 0) {
         state.remaining = 0;
         state.running = false;
+        state.endTime = null;
         clearInterval(state.interval);
         renderTimers();
         playBeep();
@@ -997,7 +1074,7 @@ function toggleTimer(i) {
       } else {
         renderTimers();
       }
-    }, 1000);
+    }, 500); // 500ms로 더 자주 체크해서 정확도 향상
   }
   renderTimers();
 }
@@ -1006,6 +1083,7 @@ function resetTimer(i) {
   clearInterval(timerStates[i].interval);
   timerStates[i].remaining = timerStates[i].total;
   timerStates[i].running = false;
+  timerStates[i].endTime = null;
   renderTimers();
 }
 
@@ -1032,7 +1110,7 @@ function startCustomTimer() {
   const idx = timerStates.length;
   const label = `${m > 0 ? `${m}분` : ''}${s > 0 ? `${s}초` : ''}`;
   presetTimers.push({ emoji: '⚙️', label, minutes: 0, color: '#D5F0FF', isCustom: true });
-  timerStates.push({ total, remaining: total, running: false, interval: null });
+  timerStates.push({ total, remaining: total, running: false, interval: null, endTime: null });
   renderTimers();
   setTimeout(() => toggleTimer(idx), 100);
 }
